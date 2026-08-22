@@ -8,9 +8,13 @@ Guidance for OpenCode (and other coding agents) working in this repository.
 - `npm run dev` — dev server on port `3001`
 - `npm run build` — production build (lint skipped via `next.config.mjs`)
 - `npm start` — serve the build on port `3001`
+- `docker compose up -d --build` — run the container on port `3001` attached to
+  the external Docker network `donweb`
 
 > **Port quirk:** port `3000` is occupied on this machine. This project defaults
 > to `3001`; Docker images also expose `3001`.
+> **Deploy network:** production expects an existing external Docker network
+> named `donweb`; create it first if missing with `docker network create donweb`.
 
 ## Architecture
 

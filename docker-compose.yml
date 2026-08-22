@@ -1,0 +1,14 @@
+services:
+  rockola:
+    build: .
+    image: rockola:latest
+    container_name: rockola
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    networks:
+      - donweb
+
+networks:
+  donweb:
+    external: true

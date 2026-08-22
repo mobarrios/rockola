@@ -5,12 +5,12 @@ Guidance for OpenCode (and other coding agents) working in this repository.
 ## Commands
 
 - `npm install` — install deps
-- `npm run dev` — dev server
+- `npm run dev` — dev server on port `3001`
 - `npm run build` — production build (lint skipped via `next.config.mjs`)
-- `npm start` — serve the build
+- `npm start` — serve the build on port `3001`
 
-> **Port quirk:** on this machine port `3000` is occupied by Docker. Run the
-> dev/start server on another port, e.g. `PORT=3100 npm start`.
+> **Port quirk:** port `3000` is occupied on this machine. This project defaults
+> to `3001`; Docker images also expose `3001`.
 
 ## Architecture
 

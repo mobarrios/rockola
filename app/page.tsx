@@ -18,6 +18,7 @@ const TOTAL_ROUNDS = 10;
 const MIN_TRACKS_FOR_GAME = TOTAL_ROUNDS * 5;
 const FIRST_CLUE_SECONDS = 2;
 const SECOND_CLUE_SECONDS = 4;
+const MAX_ROUND_POINTS = 5;
 
 interface RoundState {
   correct: ITunesTrack;
@@ -25,9 +26,10 @@ interface RoundState {
 }
 
 interface RoundResult {
-  base: number;
+  speed: number;
   artist: number;
   song: number;
+  elapsedSeconds: number;
   total: number;
 }
 
@@ -98,6 +100,14 @@ function pickFiveUniqueArtists(tracks: ITunesTrack[]): ITunesTrack[] {
   return uniqueByArtist(shuffle(tracks)).slice(0, 5);
 }
 
+function speedPoints(elapsedSeconds: number): number {
+  if (elapsedSeconds <= 5) return 5;
+  if (elapsedSeconds <= 10) return 4;
+  if (elapsedSeconds <= 15) return 3;
+  if (elapsedSeconds <= 25) return 2;
+  return 1;
+}
+
 function Waveform({ active }: { active: boolean }) {
   const bars = [16, 26, 14, 32, 20, 36, 18, 28, 16, 34];
   return (
@@ -154,6 +164,7 @@ export default function Home() {
   const audioRef = useRef<HTMLAudioElement>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const clueStartsRef = useRef<{ first?: number; second?: number }>({});
+  const roundStartedAtRef = useRef<number>(Date.now());
 
   function randomStart(duration: number, seconds: number, avoid?: number): number {
     const max = Math.max(0, duration - seconds - 0.5);
@@ -271,6 +282,7 @@ export default function Home() {
     setAudioReady(false);
     setAudioError(null);
     clueStartsRef.current = {};
+    roundStartedAtRef.current = Date.now();
     setRoundNo((n) => n + 1);
     setTimeout(() => prepareAudio(correct.previewUrl), 0);
     return true;
@@ -329,14 +341,18 @@ export default function Home() {
     setIsPlaying(false);
     const artistCorrect = selectedArtist === round.correct.artistName;
     const songCorrect = selectedSongId === round.correct.trackId;
-    const base = clueLevel === 1 ? 3 : 1;
+    const elapsedSeconds = Math.max(
+      1,
+      Math.ceil((Date.now() - roundStartedAtRef.current) / 1000)
+    );
     const result = {
-      base: artistCorrect && songCorrect ? base : 0,
-      artist: artistCorrect ? 1 : 0,
-      song: songCorrect ? 1 : 0,
+      speed: artistCorrect && songCorrect ? speedPoints(elapsedSeconds) : 0,
+      artist: artistCorrect && !songCorrect ? 1 : 0,
+      song: 0,
+      elapsedSeconds,
       total: 0,
     };
-    result.total = result.base + result.artist + result.song;
+    result.total = result.speed + result.artist + result.song;
     setRoundResult(result);
     setScore((s) => s + result.total);
     setStreak((st) => (artistCorrect && songCorrect ? st + 1 : 0));
@@ -395,7 +411,7 @@ export default function Home() {
           ROCKOLA
         </h1>
         <p className="mx-auto mt-1 max-w-xl text-sm font-medium text-slate-600">
-          10 canciones, dos pistas por tema y puntos extra por autor y nombre.
+          10 canciones: cuanto más rápido aciertes, más puntos sumás.
         </p>
       </header>
 
@@ -405,8 +421,7 @@ export default function Home() {
             Elige tu desafío
           </h2>
           <p className="mb-4 text-xs font-medium text-slate-500">
-            Partida de {TOTAL_ROUNDS} canciones. Primera pista: 2s por 3 puntos.
-            Segunda pista: 4s por 1 punto.
+            Partida de {TOTAL_ROUNDS} canciones. Cada ronda vale hasta {MAX_ROUND_POINTS} puntos por velocidad.
           </p>
 
           <label className="mb-4 block">
@@ -541,7 +556,7 @@ export default function Home() {
                 className="rounded-2xl bg-orange-600 px-4 py-2.5 text-left font-black text-white shadow-xl shadow-orange-200 transition hover:-translate-y-0.5 hover:bg-slate-950"
               >
                 <span className="block">▶ Primera pista</span>
-                <span className="block text-xs font-bold opacity-85">2s · 3 puntos base</span>
+                <span className="block text-xs font-bold opacity-85">2s · más puntos si acertás rápido</span>
               </button>
               <button
                 type="button"
@@ -556,7 +571,7 @@ export default function Home() {
                 }`}
               >
                 <span className="block">▶ Segunda pista</span>
-                <span className="block text-xs font-bold opacity-70">4s · baja a 1 punto</span>
+                <span className="block text-xs font-bold opacity-70">4s · ayuda extra, sigue contando el tiempo</span>
               </button>
             </div>
 
@@ -683,13 +698,13 @@ export default function Home() {
               {roundResult && (
                 <div className="mx-auto mt-2 flex max-w-md flex-wrap justify-center gap-2 text-xs font-black">
                   <span className="rounded-full bg-slate-100 px-3 py-1.5 text-slate-700">
-                    Pista: +{roundResult.base}
+                    Tiempo: {roundResult.elapsedSeconds}s
                   </span>
                   <span className="rounded-full bg-slate-100 px-3 py-1.5 text-slate-700">
-                    Autor: +{roundResult.artist}
+                    Velocidad: +{roundResult.speed}
                   </span>
                   <span className="rounded-full bg-slate-100 px-3 py-1.5 text-slate-700">
-                    Tema: +{roundResult.song}
+                    Autor parcial: +{roundResult.artist}
                   </span>
                   <span className="rounded-full bg-orange-100 px-3 py-1.5 text-orange-800">
                     Total ronda: +{roundResult.total}

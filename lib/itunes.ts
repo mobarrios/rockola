@@ -16,6 +16,7 @@ export interface ITunesTrack {
 const SEARCH = "https://api.deezer.com/search/track";
 const ARTIST_SEARCH = "https://api.deezer.com/search/artist";
 const ARTIST_TOP = "https://api.deezer.com/artist";
+const ITUNES_SEARCH = "https://itunes.apple.com/search";
 const seedTrackCache = new Map<string, ITunesTrack | null>();
 const poolCache = new Map<
   string,
@@ -72,6 +73,32 @@ function dedupeByArtist(tracks: ITunesTrack[]): ITunesTrack[] {
   return out;
 }
 
+function proxyPreview(previewUrl: string): string {
+  return `/api/audio?src=${encodeURIComponent(previewUrl)}`;
+}
+
+async function previewWorks(previewUrl: string): Promise<boolean> {
+  const ctrl = new AbortController();
+  const to = setTimeout(() => ctrl.abort(), 5000);
+  try {
+    const res = await fetch(previewUrl, {
+      signal: ctrl.signal,
+      headers: {
+        Range: "bytes=0-1",
+        "User-Agent":
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36",
+        Accept: "audio/mpeg,audio/*;q=0.9,*/*;q=0.8",
+      },
+      cache: "no-store",
+    });
+    return res.ok || res.status === 206;
+  } catch {
+    return false;
+  } finally {
+    clearTimeout(to);
+  }
+}
+
 function dedupeByTitle(tracks: ITunesTrack[]): ITunesTrack[] {
   const seen = new Set<string>();
   const out: ITunesTrack[] = [];
@@ -84,12 +111,31 @@ function dedupeByTitle(tracks: ITunesTrack[]): ITunesTrack[] {
   return out;
 }
 
-async function searchSeedTrack(
+function deezerTrackToApp(t: any, seed: AllTimeTrackSeed): ITunesTrack {
+  return {
+    trackId: Number(t.id),
+    trackName: t.title,
+    artistName: seed.artist,
+    previewUrl: proxyPreview(t.preview),
+    artworkUrl100: t.album?.cover_medium ?? t.album?.cover ?? "",
+    primaryGenreName: seed.genre,
+  };
+}
+
+function itunesTrackToApp(t: any, seed: AllTimeTrackSeed): ITunesTrack {
+  return {
+    trackId: Number(t.trackId),
+    trackName: t.trackName,
+    artistName: seed.artist,
+    previewUrl: proxyPreview(t.previewUrl),
+    artworkUrl100: t.artworkUrl100 ?? "",
+    primaryGenreName: t.primaryGenreName ?? seed.genre,
+  };
+}
+
+async function searchSeedTrackDeezer(
   seed: AllTimeTrackSeed,
-  country: string
 ): Promise<ITunesTrack | null> {
-  const cacheKey = `${country}:${seed.artist}:${seed.title}`.toLowerCase();
-  if (seedTrackCache.has(cacheKey)) return seedTrackCache.get(cacheKey)!;
   const params = new URLSearchParams({
     q: `${seed.artist} ${seed.title}`,
     limit: "10",
@@ -115,23 +161,67 @@ async function searchSeedTrack(
       matchesSeedTitle(t.title, seed.title)
     );
     const t = (preferred[0] ?? matches[0] ?? candidates[0]) as any;
-    if (!t) {
-      seedTrackCache.set(cacheKey, null);
-      return null;
-    }
-    const track = {
-      trackId: Number(t.id),
-      trackName: t.title,
-      artistName: seed.artist,
-      previewUrl: t.preview,
-      artworkUrl100: t.album?.cover_medium ?? t.album?.cover ?? "",
-      primaryGenreName: t.primaryGenreName ?? seed.genre,
-    };
-    seedTrackCache.set(cacheKey, track);
-    return track;
+    if (!t || !(await previewWorks(t.preview))) return null;
+    return deezerTrackToApp(t, seed);
   } catch {
     return null;
   }
+}
+
+async function searchSeedTrackItunes(
+  seed: AllTimeTrackSeed,
+  country: string
+): Promise<ITunesTrack | null> {
+  const params = new URLSearchParams({
+    media: "music",
+    entity: "song",
+    term: `${seed.artist} ${seed.title}`,
+    country,
+    limit: "10",
+  });
+  try {
+    const ctrl = new AbortController();
+    const to = setTimeout(() => ctrl.abort(), 8000);
+    const res = await fetch(`${ITUNES_SEARCH}?${params.toString()}`, {
+      signal: ctrl.signal,
+      next: { revalidate: 3600 },
+    });
+    clearTimeout(to);
+    if (!res.ok) return null;
+    const data = (await res.json()) as { results?: any[] };
+    const candidates = (data.results ?? []).filter(
+      (t) => t.previewUrl && t.trackName && t.artistName
+    );
+    const matches = candidates.filter((t) =>
+      matchesSeedArtist(t.artistName, seed.artist)
+    );
+    const preferred = matches.filter((t) =>
+      isPreferredArtistMatch(t.artistName, seed.artist) &&
+      matchesSeedTitle(t.trackName, seed.title)
+    );
+    const t = (preferred[0] ?? matches[0] ?? candidates[0]) as any;
+    if (!t || !(await previewWorks(t.previewUrl))) return null;
+    return itunesTrackToApp(t, seed);
+  } catch {
+    return null;
+  }
+}
+
+async function searchSeedTrack(
+  seed: AllTimeTrackSeed,
+  country: string
+): Promise<ITunesTrack | null> {
+  const cacheKey = `${country}:${seed.artist}:${seed.title}`.toLowerCase();
+  if (seedTrackCache.has(cacheKey)) return seedTrackCache.get(cacheKey)!;
+  const track =
+    (await searchSeedTrackDeezer(seed)) ??
+    (await searchSeedTrackItunes(seed, country));
+  if (track) {
+    seedTrackCache.set(cacheKey, track);
+    return track;
+  }
+  seedTrackCache.set(cacheKey, null);
+  return null;
 }
 
 export async function fetchArtistTracks(artist: string): Promise<ITunesTrack[]> {
@@ -159,7 +249,7 @@ export async function fetchArtistTracks(artist: string): Promise<ITunesTrack[]> 
               trackId: Number(t.id),
               trackName: t.title,
               artistName: artist,
-              previewUrl: t.preview,
+              previewUrl: proxyPreview(t.preview),
               artworkUrl100: t.album?.cover_medium ?? t.album?.cover ?? "",
               primaryGenreName: "",
             }));
@@ -189,11 +279,37 @@ export async function fetchArtistTracks(artist: string): Promise<ITunesTrack[]> 
         trackId: Number(t.id),
         trackName: t.title,
         artistName: artist,
-        previewUrl: t.preview,
+        previewUrl: proxyPreview(t.preview),
         artworkUrl100: t.album?.cover_medium ?? t.album?.cover ?? "",
         primaryGenreName: "",
       }));
-    return dedupeByTitle(tracks).slice(0, 12);
+    const deezerTracks = dedupeByTitle(tracks);
+    if (deezerTracks.length >= 5) return deezerTracks.slice(0, 12);
+
+    const itunesParams = new URLSearchParams({
+      media: "music",
+      entity: "song",
+      term: artist,
+      country: "us",
+      limit: "50",
+    });
+    const itunesRes = await fetch(`${ITUNES_SEARCH}?${itunesParams.toString()}`, {
+      next: { revalidate: 3600 },
+    });
+    if (!itunesRes.ok) return deezerTracks.slice(0, 12);
+    const itunesData = (await itunesRes.json()) as { results?: any[] };
+    const itunesTracks = (itunesData.results ?? [])
+      .filter((t) => t.previewUrl && t.trackName && t.artistName)
+      .filter((t) => matchesSeedArtist(t.artistName, artist))
+      .map((t) => ({
+        trackId: Number(t.trackId),
+        trackName: t.trackName,
+        artistName: artist,
+        previewUrl: proxyPreview(t.previewUrl),
+        artworkUrl100: t.artworkUrl100 ?? "",
+        primaryGenreName: t.primaryGenreName ?? "",
+      }));
+    return dedupeByTitle([...deezerTracks, ...itunesTracks]).slice(0, 12);
   } catch {
     return [];
   }

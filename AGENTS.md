@@ -22,12 +22,16 @@ Guidance for OpenCode (and other coding agents) working in this repository.
 - `app/page.tsx` — the entire game; a single client component (`"use client"`).
   Setup screen (genre / Argentina vs Internacional) and game screen live here.
 - `app/api/tracks/route.ts` — server proxy that resolves curated all-time track
-  seeds to preview URLs via the **Deezer Search API**. Always call Deezer from
-  this route, never from the browser (keeps the client simple and CORS-safe).
+  seeds to preview URLs. Resolver tries Deezer first and falls back to iTunes if
+  no usable preview is found. Never resolve music data from the browser.
+- `app/api/audio/route.ts` — same-origin audio proxy for Deezer/iTunes preview
+  URLs. The browser should play `/api/audio?...`, not CDN URLs directly; this
+  avoids Deezer CDN 403/CORS/referrer failures seen in incognito/mobile.
 - `lib/all-time-tracks.ts` — curated Top 100 all-time seed lists for Argentina
   and Internacional. The game must draw only from these lists.
 - `lib/itunes.ts` — historical filename; now resolves curated seeds through
-  Deezer and normalizes them to the app's `ITunesTrack` shape.
+  Deezer with iTunes fallback and normalizes them to the app's `ITunesTrack`
+  shape.
 - `lib/catalog.ts` — curated `GENRES` (iTunes `genreId` values) and `COUNTRIES`
   (just two: `ar` = "Argentina", `us` = "Internacional"). The country picker is a
   binary Argentina/International choice; edit this list to change the UI options.
@@ -46,12 +50,13 @@ Guidance for OpenCode (and other coding agents) working in this repository.
   "Empezar", "Escuchar", and "Siguiente" button clicks are what trigger playback
   — do not move `playClue()` into a non-gesture context (e.g. raw `useEffect`),
   or it will be blocked.
-- **Filter nulls**: some Deezer results have no preview URL; `lib/itunes.ts`
-  discards them. If a genre/country combo yields <5 tracks, the UI returns to
-  setup with a "no results" notice.
+- **Filter nulls/bad previews**: some Deezer/iTunes results have no usable
+  preview URL. `lib/itunes.ts` validates previews and discards bad ones. If a
+  genre/country combo yields <5 tracks, the UI returns to setup with a "no
+  results" notice.
 - **All-time source rules**: both Argentina (`ar`) and Internacional (`us`) are
   curated Top 100 all-time lists in `lib/all-time-tracks.ts`. `lib/itunes.ts`
-  searches Deezer for each seed (`artist + title`) and returns only resolved
+  searches providers for each seed (`artist + title`) and returns only resolved
   previews from those seeds. Do not fall back to live charts; the user wants the
   game to iterate inside those 100-song catalogs.
 - **Genre filtering**: when a selected genre has at least 5 curated seeds, use
@@ -70,3 +75,4 @@ Guidance for OpenCode (and other coding agents) working in this repository.
 ## References
 
 - Deezer Search API: `https://api.deezer.com/search/track`
+- iTunes Search API fallback: `https://itunes.apple.com/search`

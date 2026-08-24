@@ -8,11 +8,12 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const genreId = searchParams.get("genre") ?? "";
   const country = searchParams.get("country") ?? "us";
+  const label = genreId === "all" ? undefined : genreLabel(genreId);
 
   try {
     const tracks = await fetchTopTracks({
-      genreId: genreId || undefined,
-      genreLabel: genreLabel(genreId),
+      genreId: genreId && genreId !== "all" ? genreId : undefined,
+      genreLabel: label,
       country,
       limit: 100,
     });

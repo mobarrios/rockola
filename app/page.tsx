@@ -15,6 +15,7 @@ interface ITunesTrack {
 type Screen = "setup" | "game" | "finished";
 
 const TOTAL_ROUNDS = 10;
+const MIN_TRACKS_FOR_GAME = TOTAL_ROUNDS * 5;
 const FIRST_CLUE_SECONDS = 2;
 const SECOND_CLUE_SECONDS = 4;
 
@@ -42,6 +43,31 @@ function shuffle<T>(arr: T[]): T[] {
 
 function artwork300(url: string): string {
   return url.replace("100x100", "300x300");
+}
+
+function artistKey(track: ITunesTrack): string {
+  return track.artistName
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function uniqueByArtist(tracks: ITunesTrack[]): ITunesTrack[] {
+  const seen = new Set<string>();
+  const out: ITunesTrack[] = [];
+  for (const t of tracks) {
+    const key = artistKey(t);
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    out.push(t);
+  }
+  return out;
+}
+
+function pickFiveUniqueArtists(tracks: ITunesTrack[]): ITunesTrack[] {
+  return uniqueByArtist(shuffle(tracks)).slice(0, 5);
 }
 
 export default function Home() {
@@ -98,13 +124,14 @@ export default function Home() {
     else el.addEventListener("loadedmetadata", play, { once: true });
   }
 
-  async function refill() {
+  async function refill(): Promise<number> {
     setLoading(true);
     try {
       const params = new URLSearchParams({ genre, country });
       const res = await fetch(`/api/tracks?${params.toString()}`);
       const data = await res.json();
-      deckRef.current = data.tracks ?? [];
+      deckRef.current = uniqueByArtist(data.tracks ?? []);
+      return deckRef.current.length;
     } finally {
       setLoading(false);
     }
@@ -117,11 +144,16 @@ export default function Home() {
       setScreen("setup");
       return false;
     }
-    const nextFive = shuffle(deckRef.current).slice(0, 5);
+    const nextFive = pickFiveUniqueArtists(deckRef.current);
+    if (nextFive.length < 5) {
+      setNoResults(true);
+      setScreen("setup");
+      return false;
+    }
     const [correct, ...distractors] = nextFive;
-    const used = new Set(nextFive.map((t) => t.trackId));
+    const used = new Set(nextFive.map(artistKey));
     const options = [correct, ...distractors];
-    deckRef.current = deckRef.current.filter((t) => !used.has(t.trackId));
+    deckRef.current = deckRef.current.filter((t) => !used.has(artistKey(t)));
     setRound({
       correct,
       songOptions: shuffle(options),
@@ -134,7 +166,6 @@ export default function Home() {
     setRoundResult(null);
     clueStartsRef.current = {};
     setRoundNo((n) => n + 1);
-    setTimeout(() => playClue(1, correct.previewUrl ?? undefined), 120);
     return true;
   }
 
@@ -144,6 +175,11 @@ export default function Home() {
     setScore(0);
     setStreak(0);
     setRoundNo(0);
+    const count = await refill();
+    if (count < MIN_TRACKS_FOR_GAME) {
+      setNoResults(true);
+      return;
+    }
     if (await generateRound()) setScreen("game");
   }
 
@@ -180,6 +216,12 @@ export default function Home() {
     setStreak(0);
     setRoundNo(0);
     setNoResults(false);
+    const count = await refill();
+    if (count < MIN_TRACKS_FOR_GAME) {
+      setNoResults(true);
+      setScreen("setup");
+      return;
+    }
     if (await generateRound()) setScreen("game");
   }
 
@@ -250,9 +292,18 @@ export default function Home() {
 
           {noResults && (
             <p className="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
-              No encontré suficientes canciones con esa combinación. Prueba otro
-              género o país.
+              No hay suficientes artistas únicos para una partida de 10 canciones
+              con esa combinación. Probá con "Todos" o con otro género.
             </p>
+          )}
+
+          {loading && (
+            <div className="mb-4 rounded-2xl border border-orange-200 bg-orange-50 px-4 py-4 text-sm font-bold text-orange-800">
+              <div className="flex items-center gap-3">
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-orange-300 border-t-orange-700" />
+                Preparando partida: resolviendo previews y validando artistas únicos...
+              </div>
+            </div>
           )}
 
           <button
@@ -261,7 +312,7 @@ export default function Home() {
             disabled={loading}
             className="w-full rounded-2xl bg-slate-950 px-5 py-4 text-base font-black text-white shadow-xl shadow-slate-300 transition hover:-translate-y-0.5 hover:bg-orange-600 disabled:translate-y-0 disabled:cursor-not-allowed disabled:bg-slate-400"
           >
-            {loading ? "Cargando…" : "Empezar a jugar"}
+            {loading ? "Preparando partida…" : "Comenzar"}
           </button>
 
           <p className="mt-4 text-center text-xs font-medium text-slate-500">

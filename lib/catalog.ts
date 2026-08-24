@@ -9,6 +9,7 @@ export interface Country {
 }
 
 export const GENRES: Genre[] = [
+  { id: "all", label: "Todos" },
   { id: "14", label: "Pop" },
   { id: "21", label: "Rock" },
   { id: "18", label: "Hip-Hop" },

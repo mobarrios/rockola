@@ -98,7 +98,7 @@ async function searchSeedTrack(
   const track = {
     trackId: Number(t.id),
     trackName: t.title,
-    artistName: t.artist.name,
+    artistName: seed.artist,
     previewUrl: t.preview,
     artworkUrl100: t.album?.cover_medium ?? t.album?.cover ?? "",
     primaryGenreName: t.primaryGenreName ?? seed.genre,
@@ -116,8 +116,10 @@ async function fetchAllTimeTracks(opts: {
 }): Promise<ITunesTrack[]> {
   const allSeeds =
     opts.country === "ar" ? ARGENTINA_ALL_TIME_TRACKS : INTERNATIONAL_ALL_TIME_TRACKS;
-  const byGenre = allSeeds.filter((s) => s.genre === opts.genreLabel);
-  const seeds = shuffle(byGenre.length >= 5 ? byGenre : allSeeds);
+  const seedsForGenre = opts.genreLabel
+    ? allSeeds.filter((s) => s.genre === opts.genreLabel)
+    : allSeeds;
+  const seeds = shuffle(seedsForGenre);
   const chosen = seeds.slice(0, 100);
   const out: ITunesTrack[] = [];
   let idx = 0;

@@ -7,7 +7,7 @@ Guidance for OpenCode (and other coding agents) working in this repository.
 - `npm install` — install deps
 - `npm run dev` — dev server on port `3001`
 - `npm run build` — production build (lint skipped via `next.config.mjs`)
-- `npm start` — serve the build on port `3001`
+- `npm start` — serve the standalone build on port `3001` (run `npm run build` first)
 - `docker compose up -d --build` — run the container on port `3001` attached to
   the external Docker network `donweb`
 
@@ -44,7 +44,7 @@ Guidance for OpenCode (and other coding agents) working in this repository.
   waits for `loadedmetadata`, then pauses after the clue duration.
 - **Browser autoplay policy**: audio only starts from a user gesture. The
   "Empezar", "Escuchar", and "Siguiente" button clicks are what trigger playback
-  — do not move `playClip()` into a non-gesture context (e.g. raw `useEffect`),
+  — do not move `playClue()` into a non-gesture context (e.g. raw `useEffect`),
   or it will be blocked.
 - **Filter nulls**: some Deezer results have no preview URL; `lib/itunes.ts`
   discards them. If a genre/country combo yields <5 tracks, the UI returns to

@@ -191,7 +191,7 @@ export default function Home() {
       el.load();
     }
     const seconds = level === 1 ? FIRST_CLUE_SECONDS : SECOND_CLUE_SECONDS;
-    const stop = () => {
+    const startTimer = () => {
       if (timerRef.current) clearTimeout(timerRef.current);
       setIsPlaying(true);
       timerRef.current = setTimeout(() => {
@@ -199,24 +199,32 @@ export default function Home() {
         setIsPlaying(false);
       }, seconds * 1000);
     };
-    const seekAndPlay = () => {
-      const seconds = level === 1 ? FIRST_CLUE_SECONDS : SECOND_CLUE_SECONDS;
+    const seekToClue = () => {
       const starts = clueStartsRef.current;
       const key = level === 1 ? "first" : "second";
       const avoid = level === 2 ? starts.first : starts.second;
       if (starts[key] === undefined) starts[key] = randomStart(el.duration, seconds, avoid);
       el.currentTime = starts[key] ?? 0;
-      el.play().then(stop).catch(() => {
+    };
+    if (el.readyState >= 1) {
+      seekToClue();
+      void el.play().then(startTimer).catch(() => {
         setIsPlaying(false);
         setAudioError("El navegador bloqueó la reproducción. Usá el control de audio o tocá la pista otra vez.");
       });
+      return;
+    }
+
+    const onMetadata = () => {
+      seekToClue();
+      startTimer();
     };
-    el.play().then(stop).catch(() => {
+    el.addEventListener("loadedmetadata", onMetadata, { once: true });
+    void el.play().catch(() => {
+      el.removeEventListener("loadedmetadata", onMetadata);
       setIsPlaying(false);
       setAudioError("El navegador bloqueó la reproducción. Usá el control de audio o tocá la pista otra vez.");
     });
-    if (el.readyState >= 1) seekAndPlay();
-    else el.addEventListener("loadedmetadata", seekAndPlay, { once: true });
   }
 
   async function refill(): Promise<number> {

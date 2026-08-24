@@ -63,12 +63,13 @@ Guidance for OpenCode (and other coding agents) working in this repository.
   only that genre. Do not mix folklore/Latin into Rock just to fill the pool;
   expand the curated list instead if a genre needs more rounds.
 - **Pool rules**: every response is **deduped by artist** so no band repeats
-  within a game. Current resolved pools are ~99-100 unique artists, enough for 10
-  rounds because each round consumes 5 unique artists.
-- **Game length/scoring**: `TOTAL_ROUNDS = 10`. Each round first shows 5 author
-  options; after the user selects one, `/api/artist-tracks` loads 5 song options
-  for that selected author. Full correct answer earns clue base points (3 or 1)
-  plus 1 extra for correct author and 1 extra for correct title; max score is 50.
+  within a game. The game uses 5 unique artists per round and adapts the round
+  count to the resolved pool, capped at 10 rounds.
+- **Game length/scoring**: `MAX_ROUNDS = 10`. Each round first shows 5 author
+  options; after the user selects one, `/api/artist-tracks` loads song options
+  for that selected author. Full correct answers earn speed-based points: 5
+  points up to 5s, 4 up to 10s, 3 up to 15s, 2 up to 25s, 1 after that. If only
+  the artist is correct, the round earns 1 partial point.
 - Use plain `<img>` for external artwork; `next/image` would
   require remote domain config.
 

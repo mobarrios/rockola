@@ -14,8 +14,8 @@ interface ITunesTrack {
 
 type Screen = "setup" | "game" | "finished";
 
-const TOTAL_ROUNDS = 10;
-const MIN_TRACKS_FOR_GAME = TOTAL_ROUNDS * 5;
+const MAX_ROUNDS = 10;
+const TRACKS_PER_ROUND = 5;
 const FIRST_CLUE_SECONDS = 2;
 const SECOND_CLUE_SECONDS = 4;
 const MAX_ROUND_POINTS = 5;
@@ -108,6 +108,10 @@ function speedPoints(elapsedSeconds: number): number {
   return 1;
 }
 
+function playableRounds(trackCount: number): number {
+  return Math.min(MAX_ROUNDS, Math.floor(trackCount / TRACKS_PER_ROUND));
+}
+
 function Waveform({ active }: { active: boolean }) {
   const bars = [16, 26, 14, 32, 20, 36, 18, 28, 16, 34];
   return (
@@ -156,6 +160,7 @@ export default function Home() {
   const [score, setScore] = useState(0);
   const [streak, setStreak] = useState(0);
   const [roundNo, setRoundNo] = useState(0);
+  const [totalRounds, setTotalRounds] = useState(MAX_ROUNDS);
   const [loading, setLoading] = useState(false);
   const [loadingSongs, setLoadingSongs] = useState(false);
   const [noResults, setNoResults] = useState(false);
@@ -252,14 +257,14 @@ export default function Home() {
   }
 
   async function generateRound() {
-    if (deckRef.current.length < 5) await refill();
-    if (deckRef.current.length < 5) {
+    if (deckRef.current.length < TRACKS_PER_ROUND) await refill();
+    if (deckRef.current.length < TRACKS_PER_ROUND) {
       setNoResults(true);
       setScreen("setup");
       return false;
     }
     const nextFive = pickFiveUniqueArtists(deckRef.current);
-    if (nextFive.length < 5) {
+    if (nextFive.length < TRACKS_PER_ROUND) {
       setNoResults(true);
       setScreen("setup");
       return false;
@@ -327,10 +332,12 @@ export default function Home() {
     setStreak(0);
     setRoundNo(0);
     const count = await refill();
-    if (count < MIN_TRACKS_FOR_GAME) {
+    const rounds = playableRounds(count);
+    if (rounds < 1) {
       setNoResults(true);
       return;
     }
+    setTotalRounds(rounds);
     if (await generateRound()) setScreen("game");
   }
 
@@ -359,7 +366,7 @@ export default function Home() {
   }
 
   async function nextRound() {
-    if (roundNo >= TOTAL_ROUNDS) {
+    if (roundNo >= totalRounds) {
       setScreen("finished");
       return;
     }
@@ -373,11 +380,13 @@ export default function Home() {
     setRoundNo(0);
     setNoResults(false);
     const count = await refill();
-    if (count < MIN_TRACKS_FOR_GAME) {
+    const rounds = playableRounds(count);
+    if (rounds < 1) {
       setNoResults(true);
       setScreen("setup");
       return;
     }
+    setTotalRounds(rounds);
     if (await generateRound()) setScreen("game");
   }
 
@@ -411,7 +420,7 @@ export default function Home() {
           ROCKOLA
         </h1>
         <p className="mx-auto mt-1 max-w-xl text-sm font-medium text-slate-600">
-          10 canciones: cuanto más rápido aciertes, más puntos sumás.
+          Hasta 10 canciones: cuanto más rápido aciertes, más puntos sumás.
         </p>
       </header>
 
@@ -421,8 +430,13 @@ export default function Home() {
             Elige tu desafío
           </h2>
           <p className="mb-4 text-xs font-medium text-slate-500">
-            Partida de {TOTAL_ROUNDS} canciones. Cada ronda vale hasta {MAX_ROUND_POINTS} puntos por velocidad.
+            La partida usa las rondas disponibles para el género elegido. Cada ronda vale hasta {MAX_ROUND_POINTS} puntos.
           </p>
+
+          <div className="mb-4 rounded-2xl border border-orange-200 bg-orange-50 px-4 py-3 text-xs font-bold text-orange-900">
+            Puntaje: 0-5s = 5 pts · 6-10s = 4 · 11-15s = 3 · 16-25s = 2 · +26s = 1.
+            Tenés que acertar autor y tema; si solo acertás el autor, sumás 1 punto parcial.
+          </div>
 
           <label className="mb-4 block">
             <span className="mb-1 block text-sm font-bold text-slate-700">Género</span>
@@ -461,8 +475,8 @@ export default function Home() {
 
           {noResults && (
             <p className="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
-              No hay suficientes artistas únicos para una partida de 10 canciones
-              con esa combinación. Probá con "Todos" o con otro género.
+              No hay suficientes artistas únicos con preview para jugar ese género.
+              Probá con "Todos" o con otro origen.
             </p>
           )}
 
@@ -495,7 +509,10 @@ export default function Home() {
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-xs sm:text-sm">
             <div className="flex flex-wrap items-center gap-2">
               <span className="rounded-full border border-slate-200 bg-white px-3 py-1.5 font-black text-slate-800 shadow-sm">
-                Ronda {roundNo}/{TOTAL_ROUNDS}
+                Ronda {roundNo}/{totalRounds}
+              </span>
+              <span className="rounded-full border border-orange-200 bg-orange-50 px-3 py-1.5 font-black text-orange-700 shadow-sm">
+                Máx {totalRounds * MAX_ROUND_POINTS} pts
               </span>
               <button
                 type="button"
@@ -580,7 +597,7 @@ export default function Home() {
                 ? "¿Acertaste? Mira la portada y el título."
                 : selectedArtist
                   ? `Ahora elegí una canción de ${selectedArtist}.`
-                  : "Primero elegí el autor. Después aparecen canciones de ese autor."}
+                  : "Acertá autor y tema rápido: el reloj ya está corriendo."}
             </p>
           </div>
 
@@ -716,7 +733,7 @@ export default function Home() {
                 onClick={nextRound}
                 className="mt-3 rounded-2xl bg-slate-950 px-7 py-2.5 font-black text-white shadow-xl shadow-slate-300 transition hover:-translate-y-0.5 hover:bg-orange-600"
               >
-                {roundNo >= TOTAL_ROUNDS ? "Ver resultado final" : "Siguiente canción →"}
+                {roundNo >= totalRounds ? "Ver resultado final" : "Siguiente canción →"}
               </button>
             </div>
           )}
@@ -730,7 +747,7 @@ export default function Home() {
           </div>
           <h2 className="text-2xl font-black text-slate-950">Partida terminada</h2>
           <p className="mt-1 text-sm font-semibold text-slate-600">
-            Hiciste <strong>{score}</strong> puntos de 50 posibles en {TOTAL_ROUNDS} canciones.
+            Hiciste <strong>{score}</strong> puntos de {totalRounds * MAX_ROUND_POINTS} posibles en {totalRounds} canciones.
           </p>
           <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-center">
             <button

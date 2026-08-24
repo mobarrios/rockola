@@ -110,7 +110,12 @@ export default function Home() {
     if (timerRef.current) clearTimeout(timerRef.current);
     el.src = url;
     el.load();
-    const play = () => {
+    const seconds = level === 1 ? FIRST_CLUE_SECONDS : SECOND_CLUE_SECONDS;
+    const stop = () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(() => el.pause(), seconds * 1000);
+    };
+    const seekAndPlay = () => {
       const seconds = level === 1 ? FIRST_CLUE_SECONDS : SECOND_CLUE_SECONDS;
       const starts = clueStartsRef.current;
       const key = level === 1 ? "first" : "second";
@@ -118,10 +123,11 @@ export default function Home() {
       if (starts[key] === undefined) starts[key] = randomStart(el.duration, seconds, avoid);
       el.currentTime = starts[key] ?? 0;
       el.play().catch(() => {});
-      timerRef.current = setTimeout(() => el.pause(), seconds * 1000);
+      stop();
     };
-    if (el.readyState >= 1) play();
-    else el.addEventListener("loadedmetadata", play, { once: true });
+    el.play().then(stop).catch(() => {});
+    if (el.readyState >= 1) seekAndPlay();
+    else el.addEventListener("loadedmetadata", seekAndPlay, { once: true });
   }
 
   async function refill(): Promise<number> {

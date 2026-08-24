@@ -15,6 +15,12 @@ export interface ITunesTrack {
 
 const SEARCH = "https://api.deezer.com/search/track";
 const seedTrackCache = new Map<string, ITunesTrack | null>();
+const poolCache = new Map<
+  string,
+  { expires: number; tracks: ITunesTrack[]; pending?: Promise<ITunesTrack[]> }
+>();
+const POOL_CACHE_MS = 1000 * 60 * 30;
+const SHORT_POOL_CACHE_MS = 1000 * 60;
 
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
@@ -75,36 +81,40 @@ async function searchSeedTrack(
     limit: "10",
   });
   try {
+    const ctrl = new AbortController();
+    const to = setTimeout(() => ctrl.abort(), 8000);
     const res = await fetch(`${SEARCH}?${params.toString()}`, {
+      signal: ctrl.signal,
       next: { revalidate: 3600 },
     });
+    clearTimeout(to);
     if (!res.ok) return null;
     const data = (await res.json()) as { data?: any[] };
-  const candidates = (data.data ?? []).filter(
-    (t) => t.preview && t.title && t.artist?.name
-  );
-  const matches = candidates.filter((t) =>
-    matchesSeedArtist(t.artist.name, seed.artist)
-  );
-  const preferred = matches.filter((t) =>
-    isPreferredArtistMatch(t.artist.name, seed.artist) &&
-    matchesSeedTitle(t.title, seed.title)
-  );
-  const t = (preferred[0] ?? matches[0] ?? candidates[0]) as any;
-  if (!t) {
-    seedTrackCache.set(cacheKey, null);
-    return null;
-  }
-  const track = {
-    trackId: Number(t.id),
-    trackName: t.title,
-    artistName: seed.artist,
-    previewUrl: t.preview,
-    artworkUrl100: t.album?.cover_medium ?? t.album?.cover ?? "",
-    primaryGenreName: t.primaryGenreName ?? seed.genre,
-  };
-  seedTrackCache.set(cacheKey, track);
-  return track;
+    const candidates = (data.data ?? []).filter(
+      (t) => t.preview && t.title && t.artist?.name
+    );
+    const matches = candidates.filter((t) =>
+      matchesSeedArtist(t.artist.name, seed.artist)
+    );
+    const preferred = matches.filter((t) =>
+      isPreferredArtistMatch(t.artist.name, seed.artist) &&
+      matchesSeedTitle(t.title, seed.title)
+    );
+    const t = (preferred[0] ?? matches[0] ?? candidates[0]) as any;
+    if (!t) {
+      seedTrackCache.set(cacheKey, null);
+      return null;
+    }
+    const track = {
+      trackId: Number(t.id),
+      trackName: t.title,
+      artistName: seed.artist,
+      previewUrl: t.preview,
+      artworkUrl100: t.album?.cover_medium ?? t.album?.cover ?? "",
+      primaryGenreName: t.primaryGenreName ?? seed.genre,
+    };
+    seedTrackCache.set(cacheKey, track);
+    return track;
   } catch {
     return null;
   }
@@ -142,9 +152,21 @@ export async function fetchTopTracks(opts: {
   country: string;
   limit?: number;
 }): Promise<ITunesTrack[]> {
-  const curated = await fetchAllTimeTracks({
-    country: opts.country === "ar" ? "ar" : "us",
+  const country = opts.country === "ar" ? "ar" : "us";
+  const key = `${country}:${opts.genreLabel ?? "all"}`;
+  const cached = poolCache.get(key);
+  if (cached?.tracks.length && cached.expires > Date.now()) return shuffle(cached.tracks);
+  if (cached?.pending) return shuffle(await cached.pending);
+
+  const pending = fetchAllTimeTracks({
+    country,
     genreLabel: opts.genreLabel,
   });
-  return curated;
+  poolCache.set(key, { expires: Date.now() + POOL_CACHE_MS, tracks: cached?.tracks ?? [], pending });
+  const tracks = await pending;
+  poolCache.set(key, {
+    expires: Date.now() + (tracks.length >= 50 ? POOL_CACHE_MS : SHORT_POOL_CACHE_MS),
+    tracks,
+  });
+  return shuffle(tracks);
 }

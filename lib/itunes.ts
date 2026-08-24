@@ -70,6 +70,18 @@ function dedupeByArtist(tracks: ITunesTrack[]): ITunesTrack[] {
   return out;
 }
 
+function dedupeByTitle(tracks: ITunesTrack[]): ITunesTrack[] {
+  const seen = new Set<string>();
+  const out: ITunesTrack[] = [];
+  for (const t of tracks) {
+    const key = normalizeArtist(t.trackName);
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    out.push(t);
+  }
+  return out;
+}
+
 async function searchSeedTrack(
   seed: AllTimeTrackSeed,
   country: string
@@ -117,6 +129,34 @@ async function searchSeedTrack(
     return track;
   } catch {
     return null;
+  }
+}
+
+export async function fetchArtistTracks(artist: string): Promise<ITunesTrack[]> {
+  const params = new URLSearchParams({
+    q: artist,
+    limit: "50",
+  });
+  try {
+    const res = await fetch(`${SEARCH}?${params.toString()}`, {
+      next: { revalidate: 3600 },
+    });
+    if (!res.ok) return [];
+    const data = (await res.json()) as { data?: any[] };
+    const tracks = (data.data ?? [])
+      .filter((t) => t.preview && t.title && t.artist?.name)
+      .filter((t) => matchesSeedArtist(t.artist.name, artist))
+      .map((t) => ({
+        trackId: Number(t.id),
+        trackName: t.title,
+        artistName: artist,
+        previewUrl: t.preview,
+        artworkUrl100: t.album?.cover_medium ?? t.album?.cover ?? "",
+        primaryGenreName: "",
+      }));
+    return dedupeByTitle(tracks).slice(0, 12);
+  } catch {
+    return [];
   }
 }
 

@@ -60,8 +60,9 @@ Guidance for OpenCode (and other coding agents) working in this repository.
 - **Pool rules**: every response is **deduped by artist** so no band repeats
   within a game. Current resolved pools are ~99-100 unique artists, enough for 10
   rounds because each round consumes 5 unique artists.
-- **Game length/scoring**: `TOTAL_ROUNDS = 10`. Each round has separate author
-  and song-title choices. Full correct answer earns clue base points (3 or 1)
+- **Game length/scoring**: `TOTAL_ROUNDS = 10`. Each round first shows 5 author
+  options; after the user selects one, `/api/artist-tracks` loads 5 song options
+  for that selected author. Full correct answer earns clue base points (3 or 1)
   plus 1 extra for correct author and 1 extra for correct title; max score is 50.
 - Use plain `<img>` for external artwork; `next/image` would
   require remote domain config.

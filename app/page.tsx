@@ -21,7 +21,6 @@ const SECOND_CLUE_SECONDS = 4;
 
 interface RoundState {
   correct: ITunesTrack;
-  songOptions: ITunesTrack[];
   artistOptions: ITunesTrack[];
 }
 
@@ -59,6 +58,23 @@ function uniqueByArtist(tracks: ITunesTrack[]): ITunesTrack[] {
   const out: ITunesTrack[] = [];
   for (const t of tracks) {
     const key = artistKey(t);
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    out.push(t);
+  }
+  return out;
+}
+
+function uniqueSongTitles(tracks: ITunesTrack[]): ITunesTrack[] {
+  const seen = new Set<string>();
+  const out: ITunesTrack[] = [];
+  for (const t of tracks) {
+    const key = t.trackName
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, " ")
+      .trim();
     if (!key || seen.has(key)) continue;
     seen.add(key);
     out.push(t);
@@ -108,6 +124,7 @@ export default function Home() {
   const [round, setRound] = useState<RoundState | null>(null);
   const [selectedSongId, setSelectedSongId] = useState<number | null>(null);
   const [selectedArtist, setSelectedArtist] = useState<string | null>(null);
+  const [songOptions, setSongOptions] = useState<ITunesTrack[]>([]);
   const [revealed, setRevealed] = useState(false);
   const [clueLevel, setClueLevel] = useState<1 | 2>(1);
   const [roundResult, setRoundResult] = useState<RoundResult | null>(null);
@@ -116,6 +133,7 @@ export default function Home() {
   const [streak, setStreak] = useState(0);
   const [roundNo, setRoundNo] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [loadingSongs, setLoadingSongs] = useState(false);
   const [noResults, setNoResults] = useState(false);
 
   const deckRef = useRef<ITunesTrack[]>([]);
@@ -198,11 +216,11 @@ export default function Home() {
     deckRef.current = deckRef.current.filter((t) => !used.has(artistKey(t)));
     setRound({
       correct,
-      songOptions: shuffle(options),
       artistOptions: shuffle(options),
     });
     setSelectedSongId(null);
     setSelectedArtist(null);
+    setSongOptions([]);
     setRevealed(false);
     setClueLevel(1);
     setRoundResult(null);
@@ -210,6 +228,30 @@ export default function Home() {
     clueStartsRef.current = {};
     setRoundNo((n) => n + 1);
     return true;
+  }
+
+  async function chooseArtist(artist: string) {
+    if (!round || revealed) return;
+    setSelectedArtist(artist);
+    setSelectedSongId(null);
+    setSongOptions([]);
+    setLoadingSongs(true);
+    try {
+      const params = new URLSearchParams({ artist });
+      const res = await fetch(`/api/artist-tracks?${params.toString()}`);
+      const data = await res.json();
+      const tracks = uniqueSongTitles(data.tracks ?? []);
+      const isCorrectArtist = artist === round.correct.artistName;
+      const options = isCorrectArtist
+        ? shuffle([
+            round.correct,
+            ...tracks.filter((t) => t.trackId !== round.correct.trackId).slice(0, 4),
+          ]).slice(0, 5)
+        : tracks.slice(0, 5);
+      setSongOptions(options);
+    } finally {
+      setLoadingSongs(false);
+    }
   }
 
   async function start() {
@@ -448,14 +490,16 @@ export default function Home() {
             <p className="mt-4 text-center text-sm font-semibold text-slate-500">
               {revealed
                 ? "¿Acertaste? Mira la portada y el título."
-                : "Elige autor y tema. Si usas la segunda pista, el puntaje base baja."}
+                : selectedArtist
+                  ? `Ahora elegí una canción de ${selectedArtist}.`
+                  : "Primero elegí el autor. Después aparecen canciones de ese autor."}
             </p>
           </div>
 
           <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-2">
             <div className="rounded-[1.5rem] border border-slate-200 bg-white/80 p-4 shadow-sm">
               <h3 className="mb-3 text-sm font-black uppercase tracking-[0.2em] text-slate-500">
-                Autor (+1)
+                1. Autor (+1)
               </h3>
               <div className="grid gap-2">
                 {round.artistOptions.map((opt) => {
@@ -474,7 +518,7 @@ export default function Home() {
                       key={`artist-${opt.trackId}`}
                       type="button"
                       disabled={revealed}
-                      onClick={() => setSelectedArtist(opt.artistName)}
+                      onClick={() => chooseArtist(opt.artistName)}
                       className={`rounded-2xl border px-4 py-3 text-left text-sm font-bold transition ${cls}`}
                     >
                       {opt.artistName}
@@ -486,10 +530,27 @@ export default function Home() {
 
             <div className="rounded-[1.5rem] border border-slate-200 bg-white/80 p-4 shadow-sm">
               <h3 className="mb-3 text-sm font-black uppercase tracking-[0.2em] text-slate-500">
-                Tema (+1)
+                2. Tema (+1)
               </h3>
+              {!selectedArtist && (
+                <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center text-sm font-bold text-slate-500">
+                  Elegí un autor para ver 5 canciones de ese artista.
+                </div>
+              )}
+              {selectedArtist && loadingSongs && (
+                <div className="rounded-2xl border border-orange-200 bg-orange-50 px-4 py-8 text-center text-sm font-bold text-orange-800">
+                  <span className="mx-auto mb-3 block h-5 w-5 animate-spin rounded-full border-2 border-orange-300 border-t-orange-700" />
+                  Buscando canciones de {selectedArtist}...
+                </div>
+              )}
+              {selectedArtist && !loadingSongs && songOptions.length < 5 && (
+                <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-5 text-center text-sm font-bold text-red-700">
+                  No encontré 5 canciones con preview para {selectedArtist}. Elegí otro autor.
+                </div>
+              )}
+              {selectedArtist && !loadingSongs && songOptions.length >= 5 && (
               <div className="grid gap-2">
-                {round.songOptions.map((opt) => {
+                {songOptions.map((opt) => {
                   const chosen = selectedSongId === opt.trackId;
                   const isAnswer = opt.trackId === round.correct.trackId;
                   let cls =
@@ -513,6 +574,7 @@ export default function Home() {
                   );
                 })}
               </div>
+              )}
             </div>
           </div>
 
@@ -520,7 +582,7 @@ export default function Home() {
             <button
               type="button"
               onClick={submitAnswer}
-              disabled={selectedSongId === null || !selectedArtist}
+              disabled={selectedSongId === null || !selectedArtist || loadingSongs}
               className="mx-auto mt-5 rounded-2xl bg-slate-950 px-8 py-4 font-black text-white shadow-xl shadow-slate-300 transition hover:-translate-y-0.5 hover:bg-orange-600 disabled:translate-y-0 disabled:cursor-not-allowed disabled:bg-slate-300"
             >
               Confirmar respuesta

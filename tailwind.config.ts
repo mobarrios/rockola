@@ -17,10 +17,15 @@ const config: Config = {
           "0%": { transform: "scale(0.96)" },
           "100%": { transform: "scale(1)" },
         },
+        wave: {
+          "0%, 100%": { transform: "scaleY(0.45)" },
+          "50%": { transform: "scaleY(1.15)" },
+        },
       },
       animation: {
         "fade-in": "fade-in 0.35s ease-out both",
         "pop": "pop 0.2s ease-out both",
+        wave: "wave 0.85s ease-in-out infinite",
       },
     },
   },

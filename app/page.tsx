@@ -70,6 +70,36 @@ function pickFiveUniqueArtists(tracks: ITunesTrack[]): ITunesTrack[] {
   return uniqueByArtist(shuffle(tracks)).slice(0, 5);
 }
 
+function Waveform({ active }: { active: boolean }) {
+  const bars = [26, 42, 20, 54, 34, 62, 28, 48, 22, 58, 38, 46];
+  return (
+    <div
+      className={`mt-5 flex h-20 w-full max-w-xl items-center justify-center gap-2 rounded-[1.5rem] border px-5 transition ${
+        active
+          ? "border-orange-200 bg-orange-50 shadow-inner"
+          : "border-slate-200 bg-white/70"
+      }`}
+      aria-label={active ? "La pista está sonando" : "La pista está detenida"}
+    >
+      {bars.map((height, index) => (
+        <span
+          key={index}
+          className={`w-2 rounded-full bg-orange-500 transition-all ${
+            active ? "animate-wave opacity-100" : "opacity-30"
+          }`}
+          style={{
+            height: active ? height : 12,
+            animationDelay: `${index * 90}ms`,
+          }}
+        />
+      ))}
+      <span className="ml-2 text-xs font-black uppercase tracking-[0.2em] text-slate-500">
+        {active ? "Sonando" : "Listo"}
+      </span>
+    </div>
+  );
+}
+
 export default function Home() {
   const [screen, setScreen] = useState<Screen>("setup");
   const [genre, setGenre] = useState(GENRES[0].id);
@@ -81,6 +111,7 @@ export default function Home() {
   const [revealed, setRevealed] = useState(false);
   const [clueLevel, setClueLevel] = useState<1 | 2>(1);
   const [roundResult, setRoundResult] = useState<RoundResult | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
   const [score, setScore] = useState(0);
   const [streak, setStreak] = useState(0);
   const [roundNo, setRoundNo] = useState(0);
@@ -108,12 +139,17 @@ export default function Home() {
     const url = previewUrl ?? round?.correct.previewUrl;
     if (!url) return;
     if (timerRef.current) clearTimeout(timerRef.current);
+    setIsPlaying(false);
     el.src = url;
     el.load();
     const seconds = level === 1 ? FIRST_CLUE_SECONDS : SECOND_CLUE_SECONDS;
     const stop = () => {
       if (timerRef.current) clearTimeout(timerRef.current);
-      timerRef.current = setTimeout(() => el.pause(), seconds * 1000);
+      setIsPlaying(true);
+      timerRef.current = setTimeout(() => {
+        el.pause();
+        setIsPlaying(false);
+      }, seconds * 1000);
     };
     const seekAndPlay = () => {
       const seconds = level === 1 ? FIRST_CLUE_SECONDS : SECOND_CLUE_SECONDS;
@@ -170,6 +206,7 @@ export default function Home() {
     setRevealed(false);
     setClueLevel(1);
     setRoundResult(null);
+    setIsPlaying(false);
     clueStartsRef.current = {};
     setRoundNo((n) => n + 1);
     return true;
@@ -193,6 +230,7 @@ export default function Home() {
     if (revealed || !round || selectedSongId === null || !selectedArtist) return;
     setRevealed(true);
     if (audioRef.current) audioRef.current.pause();
+    setIsPlaying(false);
     const artistCorrect = selectedArtist === round.correct.artistName;
     const songCorrect = selectedSongId === round.correct.trackId;
     const base = clueLevel === 1 ? 3 : 1;
@@ -237,7 +275,13 @@ export default function Home() {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-5xl flex-col px-4 py-6 sm:px-6 sm:py-10">
-      <audio ref={audioRef} preload="none" />
+      <audio
+        ref={audioRef}
+        preload="none"
+        onPlaying={() => setIsPlaying(true)}
+        onPause={() => setIsPlaying(false)}
+        onEnded={() => setIsPlaying(false)}
+      />
 
       <header className="mb-8 text-center">
         <div className="mx-auto mb-3 inline-flex rounded-full border border-orange-200 bg-white/80 px-4 py-1 text-xs font-black uppercase tracking-[0.35em] text-orange-600 shadow-sm">
@@ -372,6 +416,8 @@ export default function Home() {
                 </div>
               )}
             </div>
+
+            <Waveform active={isPlaying} />
 
             <div className="mt-5 grid w-full max-w-xl grid-cols-1 gap-3 sm:grid-cols-2">
               <button

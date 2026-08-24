@@ -249,10 +249,12 @@ export default function Home() {
       ]);
       const isCorrectArtist = artist === round.correct.artistName;
       const options = isCorrectArtist
-        ? shuffle(uniqueSongTitles([
+        ? shuffle([
             round.correct,
-            ...tracks.filter((t) => t.trackId !== round.correct.trackId),
-          ])).slice(0, 5)
+            ...uniqueSongTitles(
+              tracks.filter((t) => t.trackId !== round.correct.trackId)
+            ).slice(0, 4),
+          ])
         : tracks.slice(0, 5);
       setSongOptions(options);
     } finally {
@@ -584,17 +586,6 @@ export default function Home() {
                     </button>
                   );
                 })}
-                {revealed &&
-                  !songOptions.some(
-                    (opt) => opt.trackId === round.correct.trackId
-                  ) && (
-                    <div className="rounded-2xl border border-emerald-500 bg-emerald-50 px-4 py-3 text-left text-sm font-bold text-emerald-950">
-                      <span className="block">Tema correcto</span>
-                      <span className="mt-1 block text-xs text-emerald-700">
-                        {round.correct.trackName} — {round.correct.artistName}
-                      </span>
-                    </div>
-                  )}
               </div>
               )}
             </div>

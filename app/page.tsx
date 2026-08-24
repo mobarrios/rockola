@@ -129,6 +129,8 @@ export default function Home() {
   const [clueLevel, setClueLevel] = useState<1 | 2>(1);
   const [roundResult, setRoundResult] = useState<RoundResult | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [audioReady, setAudioReady] = useState(false);
+  const [audioError, setAudioError] = useState<string | null>(null);
   const [score, setScore] = useState(0);
   const [streak, setStreak] = useState(0);
   const [roundNo, setRoundNo] = useState(0);
@@ -151,15 +153,29 @@ export default function Home() {
     return Math.random() * max;
   }
 
+  function prepareAudio(previewUrl?: string | null) {
+    const el = audioRef.current;
+    if (!el || !previewUrl) return;
+    setAudioReady(false);
+    setAudioError(null);
+    if (el.src !== previewUrl) {
+      el.src = previewUrl;
+      el.load();
+    }
+  }
+
   function playClue(level: 1 | 2, previewUrl?: string) {
     const el = audioRef.current;
     if (!el) return;
     const url = previewUrl ?? round?.correct.previewUrl;
     if (!url) return;
     if (timerRef.current) clearTimeout(timerRef.current);
+    setAudioError(null);
     setIsPlaying(false);
-    el.src = url;
-    el.load();
+    if (el.src !== url) {
+      el.src = url;
+      el.load();
+    }
     const seconds = level === 1 ? FIRST_CLUE_SECONDS : SECOND_CLUE_SECONDS;
     const stop = () => {
       if (timerRef.current) clearTimeout(timerRef.current);
@@ -176,10 +192,15 @@ export default function Home() {
       const avoid = level === 2 ? starts.first : starts.second;
       if (starts[key] === undefined) starts[key] = randomStart(el.duration, seconds, avoid);
       el.currentTime = starts[key] ?? 0;
-      el.play().catch(() => {});
-      stop();
+      el.play().then(stop).catch(() => {
+        setIsPlaying(false);
+        setAudioError("El navegador bloqueó la reproducción. Usá el control de audio o tocá la pista otra vez.");
+      });
     };
-    el.play().then(stop).catch(() => {});
+    el.play().then(stop).catch(() => {
+      setIsPlaying(false);
+      setAudioError("El navegador bloqueó la reproducción. Usá el control de audio o tocá la pista otra vez.");
+    });
     if (el.readyState >= 1) seekAndPlay();
     else el.addEventListener("loadedmetadata", seekAndPlay, { once: true });
   }
@@ -225,8 +246,11 @@ export default function Home() {
     setClueLevel(1);
     setRoundResult(null);
     setIsPlaying(false);
+    setAudioReady(false);
+    setAudioError(null);
     clueStartsRef.current = {};
     setRoundNo((n) => n + 1);
+    setTimeout(() => prepareAudio(correct.previewUrl), 0);
     return true;
   }
 
@@ -327,10 +351,18 @@ export default function Home() {
     <main className="mx-auto flex min-h-screen max-w-5xl flex-col px-4 py-6 sm:px-6 sm:py-10">
       <audio
         ref={audioRef}
-        preload="none"
+        preload="metadata"
+        playsInline
+        controls={Boolean(audioError)}
+        className={audioError ? "mx-auto mb-4 w-full max-w-xl" : "hidden"}
+        onLoadedMetadata={() => setAudioReady(true)}
         onPlaying={() => setIsPlaying(true)}
         onPause={() => setIsPlaying(false)}
         onEnded={() => setIsPlaying(false)}
+        onError={() => {
+          setIsPlaying(false);
+          setAudioError("No se pudo cargar el audio de esta pista. Probá otra vez o pasá de ronda.");
+        }}
       />
 
       <header className="mb-8 text-center">
@@ -468,6 +500,17 @@ export default function Home() {
             </div>
 
             <Waveform active={isPlaying} />
+
+            {!audioError && !audioReady && (
+              <p className="mt-3 text-xs font-bold text-slate-500">
+                Preparando audio de la ronda...
+              </p>
+            )}
+            {audioError && (
+              <p className="mt-3 max-w-xl rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-center text-xs font-bold text-amber-800">
+                {audioError}
+              </p>
+            )}
 
             <div className="mt-5 grid w-full max-w-xl grid-cols-1 gap-3 sm:grid-cols-2">
               <button

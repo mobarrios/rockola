@@ -232,6 +232,9 @@ export default function Home() {
 
   async function chooseArtist(artist: string) {
     if (!round || revealed) return;
+    const selectedArtistSeed = round.artistOptions.find(
+      (opt) => opt.artistName === artist
+    );
     setSelectedArtist(artist);
     setSelectedSongId(null);
     setSongOptions([]);
@@ -240,7 +243,10 @@ export default function Home() {
       const params = new URLSearchParams({ artist });
       const res = await fetch(`/api/artist-tracks?${params.toString()}`);
       const data = await res.json();
-      const tracks = uniqueSongTitles(data.tracks ?? []);
+      const tracks = uniqueSongTitles([
+        ...(selectedArtistSeed ? [selectedArtistSeed] : []),
+        ...(data.tracks ?? []),
+      ]);
       const isCorrectArtist = artist === round.correct.artistName;
       const options = isCorrectArtist
         ? shuffle(uniqueSongTitles([
@@ -578,6 +584,17 @@ export default function Home() {
                     </button>
                   );
                 })}
+                {revealed &&
+                  !songOptions.some(
+                    (opt) => opt.trackId === round.correct.trackId
+                  ) && (
+                    <div className="rounded-2xl border border-emerald-500 bg-emerald-50 px-4 py-3 text-left text-sm font-bold text-emerald-950">
+                      <span className="block">Tema correcto</span>
+                      <span className="mt-1 block text-xs text-emerald-700">
+                        {round.correct.trackName} — {round.correct.artistName}
+                      </span>
+                    </div>
+                  )}
               </div>
               )}
             </div>

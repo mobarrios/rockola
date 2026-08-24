@@ -47,7 +47,11 @@ function artwork300(url: string): string {
 function audioSource(url: string): string {
   if (url.startsWith("/api/audio")) return url;
   if (url.startsWith("http://") || url.startsWith("https://")) {
-    return `/api/audio?src=${encodeURIComponent(url)}`;
+    const token = btoa(unescape(encodeURIComponent(url)))
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_")
+      .replace(/=+$/g, "");
+    return `/api/audio?token=${token}`;
   }
   return url;
 }

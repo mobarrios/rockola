@@ -74,7 +74,8 @@ function dedupeByArtist(tracks: ITunesTrack[]): ITunesTrack[] {
 }
 
 function proxyPreview(previewUrl: string): string {
-  return `/api/audio?src=${encodeURIComponent(previewUrl)}`;
+  const token = Buffer.from(previewUrl, "utf8").toString("base64url");
+  return `/api/audio?token=${token}`;
 }
 
 async function previewWorks(previewUrl: string): Promise<boolean> {

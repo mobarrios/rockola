@@ -10,7 +10,11 @@ const ALLOWED_HOSTS = new Set([
 ]);
 
 export async function GET(req: NextRequest) {
-  const src = new URL(req.url).searchParams.get("src");
+  const params = new URL(req.url).searchParams;
+  const token = params.get("token");
+  const src = token
+    ? Buffer.from(token, "base64url").toString("utf8")
+    : params.get("src");
   if (!src) return new NextResponse("Missing audio source", { status: 400 });
 
   let url: URL;

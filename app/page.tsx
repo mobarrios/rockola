@@ -99,10 +99,10 @@ function pickFiveUniqueArtists(tracks: ITunesTrack[]): ITunesTrack[] {
 }
 
 function Waveform({ active }: { active: boolean }) {
-  const bars = [26, 42, 20, 54, 34, 62, 28, 48, 22, 58, 38, 46];
+  const bars = [16, 26, 14, 32, 20, 36, 18, 28, 16, 34];
   return (
     <div
-      className={`mt-5 flex h-20 w-full max-w-xl items-center justify-center gap-2 rounded-[1.5rem] border px-5 transition ${
+      className={`mt-3 flex h-11 w-full max-w-xl items-center justify-center gap-1.5 rounded-2xl border px-3 transition ${
         active
           ? "border-orange-200 bg-orange-50 shadow-inner"
           : "border-slate-200 bg-white/70"
@@ -112,16 +112,16 @@ function Waveform({ active }: { active: boolean }) {
       {bars.map((height, index) => (
         <span
           key={index}
-          className={`w-2 rounded-full bg-orange-500 transition-all ${
+          className={`w-1.5 rounded-full bg-orange-500 transition-all ${
             active ? "animate-wave opacity-100" : "opacity-30"
           }`}
           style={{
-            height: active ? height : 12,
+            height: active ? height : 8,
             animationDelay: `${index * 90}ms`,
           }}
         />
       ))}
-      <span className="ml-2 text-xs font-black uppercase tracking-[0.2em] text-slate-500">
+      <span className="ml-2 text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">
         {active ? "Sonando" : "Listo"}
       </span>
     </div>
@@ -362,7 +362,7 @@ export default function Home() {
   const fullyCorrect = Boolean(artistCorrect && songCorrect);
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-5xl flex-col px-4 py-6 sm:px-6 sm:py-10">
+    <main className="mx-auto flex min-h-screen max-w-5xl flex-col px-3 py-3 sm:px-5 sm:py-4">
       <audio
         ref={audioRef}
         preload="metadata"
@@ -379,34 +379,34 @@ export default function Home() {
         }}
       />
 
-      <header className="mb-8 text-center">
-        <div className="mx-auto mb-3 inline-flex rounded-full border border-orange-200 bg-white/80 px-4 py-1 text-xs font-black uppercase tracking-[0.35em] text-orange-600 shadow-sm">
+      <header className="mb-3 text-center">
+        <div className="mx-auto mb-1 inline-flex rounded-full border border-orange-200 bg-white/80 px-3 py-0.5 text-[10px] font-black uppercase tracking-[0.3em] text-orange-600 shadow-sm">
           Juego musical
         </div>
-        <h1 className="text-5xl font-black tracking-tight text-slate-950 sm:text-7xl">
+        <h1 className="text-4xl font-black tracking-tight text-slate-950 sm:text-5xl">
           ROCKOLA
         </h1>
-        <p className="mx-auto mt-3 max-w-xl text-base font-medium text-slate-600">
+        <p className="mx-auto mt-1 max-w-xl text-sm font-medium text-slate-600">
           10 canciones, dos pistas por tema y puntos extra por autor y nombre.
         </p>
       </header>
 
       {screen === "setup" && (
-        <section className="glass animate-fade-in mx-auto w-full max-w-2xl rounded-[2rem] p-6 sm:p-8">
-          <h2 className="mb-1 text-2xl font-black text-slate-950">
+        <section className="glass animate-fade-in mx-auto w-full max-w-2xl rounded-[1.5rem] p-4 sm:p-5">
+          <h2 className="mb-1 text-xl font-black text-slate-950">
             Elige tu desafío
           </h2>
-          <p className="mb-6 text-sm font-medium text-slate-500">
+          <p className="mb-4 text-xs font-medium text-slate-500">
             Partida de {TOTAL_ROUNDS} canciones. Primera pista: 2s por 3 puntos.
             Segunda pista: 4s por 1 punto.
           </p>
 
           <label className="mb-4 block">
-            <span className="mb-2 block text-sm font-bold text-slate-700">Género</span>
+            <span className="mb-1 block text-sm font-bold text-slate-700">Género</span>
             <select
               value={genre}
               onChange={(e) => setGenre(e.target.value)}
-              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 font-semibold text-slate-900 shadow-sm outline-none transition focus:border-orange-400 focus:ring-4 focus:ring-orange-100"
+              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 font-semibold text-slate-900 shadow-sm outline-none transition focus:border-orange-400 focus:ring-4 focus:ring-orange-100"
             >
               {GENRES.map((g) => (
                 <option key={g.id} value={g.id}>
@@ -416,15 +416,15 @@ export default function Home() {
             </select>
           </label>
 
-          <div className="mb-6">
-            <span className="mb-2 block text-sm font-bold text-slate-700">Origen</span>
+          <div className="mb-4">
+            <span className="mb-1 block text-sm font-bold text-slate-700">Origen</span>
             <div className="grid grid-cols-2 gap-2">
               {COUNTRIES.map((c) => (
                 <button
                   key={c.code}
                   type="button"
                   onClick={() => setCountry(c.code)}
-                  className={`rounded-xl border px-4 py-3 font-semibold transition ${
+                  className={`rounded-xl border px-4 py-2.5 font-semibold transition ${
                     country === c.code
                       ? "border-orange-500 bg-orange-500 text-white shadow-lg shadow-orange-200"
                       : "border-slate-200 bg-white text-slate-700 shadow-sm hover:border-orange-300 hover:bg-orange-50"
@@ -456,12 +456,12 @@ export default function Home() {
             type="button"
             onClick={start}
             disabled={loading}
-            className="w-full rounded-2xl bg-slate-950 px-5 py-4 text-base font-black text-white shadow-xl shadow-slate-300 transition hover:-translate-y-0.5 hover:bg-orange-600 disabled:translate-y-0 disabled:cursor-not-allowed disabled:bg-slate-400"
+            className="w-full rounded-2xl bg-slate-950 px-5 py-3 text-base font-black text-white shadow-xl shadow-slate-300 transition hover:-translate-y-0.5 hover:bg-orange-600 disabled:translate-y-0 disabled:cursor-not-allowed disabled:bg-slate-400"
           >
             {loading ? "Preparando partida…" : "Comenzar"}
           </button>
 
-          <p className="mt-4 text-center text-xs font-medium text-slate-500">
+          <p className="mt-3 text-center text-xs font-medium text-slate-500">
             Pistas vía Deezer, seleccionadas desde Top 100 all-time curados.
           </p>
         </section>
@@ -469,32 +469,32 @@ export default function Home() {
 
       {screen === "game" && round && (
         <section className="flex flex-1 flex-col">
-          <div className="mb-5 flex flex-wrap items-center justify-between gap-3 text-sm">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-xs sm:text-sm">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-full border border-slate-200 bg-white px-4 py-2 font-black text-slate-800 shadow-sm">
+              <span className="rounded-full border border-slate-200 bg-white px-3 py-1.5 font-black text-slate-800 shadow-sm">
                 Ronda {roundNo}/{TOTAL_ROUNDS}
               </span>
               <button
                 type="button"
                 onClick={restart}
-                className="rounded-full border border-slate-200 bg-white px-4 py-2 font-bold text-slate-600 shadow-sm transition hover:border-orange-300 hover:bg-orange-50 hover:text-orange-700"
+                className="rounded-full border border-slate-200 bg-white px-3 py-1.5 font-bold text-slate-600 shadow-sm transition hover:border-orange-300 hover:bg-orange-50 hover:text-orange-700"
                 title="Reiniciar manteniendo género y país"
               >
                 ↺ Reiniciar
               </button>
             </div>
             <div className="flex gap-2">
-              <span className="rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 font-black text-emerald-700">
+              <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 font-black text-emerald-700">
                 ⭐ {score}
               </span>
-              <span className="rounded-full border border-amber-200 bg-amber-50 px-4 py-2 font-black text-amber-700">
+              <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 font-black text-amber-700">
                 🔥 {streak}
               </span>
             </div>
           </div>
 
-          <div className="glass animate-pop flex flex-col items-center rounded-[2rem] p-6 sm:p-8">
-            <div className="relative h-48 w-48 overflow-hidden rounded-[1.75rem] border-4 border-white shadow-2xl shadow-slate-200">
+          <div className="glass animate-pop flex flex-col items-center rounded-[1.5rem] p-4 sm:p-5">
+            <div className="relative h-24 w-24 overflow-hidden rounded-2xl border-4 border-white shadow-xl shadow-slate-200 sm:h-28 sm:w-28">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={artwork300(round.correct.artworkUrl100)}
@@ -505,8 +505,8 @@ export default function Home() {
               />
               {!revealed && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/45 text-center backdrop-blur-sm">
-                  <span className="text-4xl">?</span>
-                  <span className="mt-1 text-xs font-black uppercase tracking-[0.2em] text-slate-700">
+                  <span className="text-3xl">?</span>
+                  <span className="mt-1 text-[10px] font-black uppercase tracking-[0.16em] text-slate-700">
                     Portada oculta
                   </span>
                 </div>
@@ -516,24 +516,24 @@ export default function Home() {
             <Waveform active={isPlaying} />
 
             {!audioError && !audioReady && (
-              <p className="mt-3 text-xs font-bold text-slate-500">
+              <p className="mt-2 text-xs font-bold text-slate-500">
                 Preparando audio de la ronda...
               </p>
             )}
             {audioError && (
-              <p className="mt-3 max-w-xl rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-center text-xs font-bold text-amber-800">
+              <p className="mt-2 max-w-xl rounded-2xl border border-amber-200 bg-amber-50 px-4 py-2 text-center text-xs font-bold text-amber-800">
                 {audioError}
               </p>
             )}
 
-            <div className="mt-5 grid w-full max-w-xl grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="mt-3 grid w-full max-w-xl grid-cols-1 gap-2 sm:grid-cols-2">
               <button
                 type="button"
                 onClick={() => playClue(1)}
-                className="rounded-2xl bg-orange-600 px-5 py-4 text-left font-black text-white shadow-xl shadow-orange-200 transition hover:-translate-y-0.5 hover:bg-slate-950"
+                className="rounded-2xl bg-orange-600 px-4 py-2.5 text-left font-black text-white shadow-xl shadow-orange-200 transition hover:-translate-y-0.5 hover:bg-slate-950"
               >
                 <span className="block">▶ Primera pista</span>
-                <span className="block text-xs font-bold opacity-85">2 segundos · 3 puntos base</span>
+                <span className="block text-xs font-bold opacity-85">2s · 3 puntos base</span>
               </button>
               <button
                 type="button"
@@ -541,18 +541,18 @@ export default function Home() {
                   setClueLevel(2);
                   playClue(2);
                 }}
-                className={`rounded-2xl border px-5 py-4 text-left font-black shadow-sm transition ${
+                className={`rounded-2xl border px-4 py-2.5 text-left font-black shadow-sm transition ${
                   clueLevel === 2
                     ? "border-slate-950 bg-slate-950 text-white"
                     : "border-slate-200 bg-white text-slate-800 hover:border-orange-300 hover:bg-orange-50"
                 }`}
               >
                 <span className="block">▶ Segunda pista</span>
-                <span className="block text-xs font-bold opacity-70">4 segundos · baja a 1 punto base</span>
+                <span className="block text-xs font-bold opacity-70">4s · baja a 1 punto</span>
               </button>
             </div>
 
-            <p className="mt-4 text-center text-sm font-semibold text-slate-500">
+            <p className="mt-3 text-center text-xs font-semibold text-slate-500 sm:text-sm">
               {revealed
                 ? "¿Acertaste? Mira la portada y el título."
                 : selectedArtist
@@ -561,9 +561,9 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-2">
-            <div className="rounded-[1.5rem] border border-slate-200 bg-white/80 p-4 shadow-sm">
-              <h3 className="mb-3 text-sm font-black uppercase tracking-[0.2em] text-slate-500">
+          <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-2">
+            <div className="rounded-[1.25rem] border border-slate-200 bg-white/80 p-3 shadow-sm">
+              <h3 className="mb-2 text-xs font-black uppercase tracking-[0.18em] text-slate-500">
                 1. Autor (+1)
               </h3>
               <div className="grid gap-2">
@@ -584,7 +584,7 @@ export default function Home() {
                       type="button"
                       disabled={revealed}
                       onClick={() => chooseArtist(opt.artistName)}
-                      className={`rounded-2xl border px-4 py-3 text-left text-sm font-bold transition ${cls}`}
+                      className={`rounded-xl border px-3 py-2 text-left text-sm font-bold transition ${cls}`}
                     >
                       {opt.artistName}
                     </button>
@@ -593,28 +593,28 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="rounded-[1.5rem] border border-slate-200 bg-white/80 p-4 shadow-sm">
-              <h3 className="mb-3 text-sm font-black uppercase tracking-[0.2em] text-slate-500">
+            <div className="rounded-[1.25rem] border border-slate-200 bg-white/80 p-3 shadow-sm">
+              <h3 className="mb-2 text-xs font-black uppercase tracking-[0.18em] text-slate-500">
                 2. Tema (+1)
               </h3>
               {!selectedArtist && (
-                <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center text-sm font-bold text-slate-500">
+                <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-5 text-center text-sm font-bold text-slate-500">
                   Elegí un autor para ver 5 canciones de ese artista.
                 </div>
               )}
               {selectedArtist && loadingSongs && (
-                <div className="rounded-2xl border border-orange-200 bg-orange-50 px-4 py-8 text-center text-sm font-bold text-orange-800">
-                  <span className="mx-auto mb-3 block h-5 w-5 animate-spin rounded-full border-2 border-orange-300 border-t-orange-700" />
+                <div className="rounded-xl border border-orange-200 bg-orange-50 px-4 py-5 text-center text-sm font-bold text-orange-800">
+                  <span className="mx-auto mb-2 block h-5 w-5 animate-spin rounded-full border-2 border-orange-300 border-t-orange-700" />
                   Buscando canciones de {selectedArtist}...
                 </div>
               )}
               {selectedArtist && !loadingSongs && songOptions.length === 0 && (
-                <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-5 text-center text-sm font-bold text-red-700">
+                <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-4 text-center text-sm font-bold text-red-700">
                   No encontré canciones con preview para {selectedArtist}. Elegí otro autor.
                 </div>
               )}
               {selectedArtist && !loadingSongs && songOptions.length > 0 && songOptions.length < 5 && (
-                <p className="mb-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-bold text-amber-800">
+                <p className="mb-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-800">
                   Encontré {songOptions.length} canciones con preview para {selectedArtist}.
                 </p>
               )}
@@ -637,7 +637,7 @@ export default function Home() {
                       type="button"
                       disabled={revealed}
                       onClick={() => setSelectedSongId(opt.trackId)}
-                      className={`rounded-2xl border px-4 py-3 text-left text-sm font-bold transition ${cls}`}
+                      className={`rounded-xl border px-3 py-2 text-left text-sm font-bold transition ${cls}`}
                     >
                       {opt.trackName}
                     </button>
@@ -653,16 +653,16 @@ export default function Home() {
               type="button"
               onClick={submitAnswer}
               disabled={selectedSongId === null || !selectedArtist || loadingSongs}
-              className="mx-auto mt-5 rounded-2xl bg-slate-950 px-8 py-4 font-black text-white shadow-xl shadow-slate-300 transition hover:-translate-y-0.5 hover:bg-orange-600 disabled:translate-y-0 disabled:cursor-not-allowed disabled:bg-slate-300"
+              className="mx-auto mt-3 rounded-2xl bg-slate-950 px-7 py-3 font-black text-white shadow-xl shadow-slate-300 transition hover:-translate-y-0.5 hover:bg-orange-600 disabled:translate-y-0 disabled:cursor-not-allowed disabled:bg-slate-300"
             >
               Confirmar respuesta
             </button>
           )}
 
           {revealed && (
-            <div className="mt-5 animate-fade-in text-center">
+            <div className="mt-3 animate-fade-in text-center">
               <p
-                className={`text-lg font-bold ${
+                className={`text-base font-bold ${
                   fullyCorrect ? "text-emerald-700" : "text-red-700"
                 }`}
               >
@@ -673,17 +673,17 @@ export default function Home() {
                 {round.correct.artistName}
               </p>
               {roundResult && (
-                <div className="mx-auto mt-3 flex max-w-md flex-wrap justify-center gap-2 text-xs font-black">
-                  <span className="rounded-full bg-slate-100 px-3 py-2 text-slate-700">
+                <div className="mx-auto mt-2 flex max-w-md flex-wrap justify-center gap-2 text-xs font-black">
+                  <span className="rounded-full bg-slate-100 px-3 py-1.5 text-slate-700">
                     Pista: +{roundResult.base}
                   </span>
-                  <span className="rounded-full bg-slate-100 px-3 py-2 text-slate-700">
+                  <span className="rounded-full bg-slate-100 px-3 py-1.5 text-slate-700">
                     Autor: +{roundResult.artist}
                   </span>
-                  <span className="rounded-full bg-slate-100 px-3 py-2 text-slate-700">
+                  <span className="rounded-full bg-slate-100 px-3 py-1.5 text-slate-700">
                     Tema: +{roundResult.song}
                   </span>
-                  <span className="rounded-full bg-orange-100 px-3 py-2 text-orange-800">
+                  <span className="rounded-full bg-orange-100 px-3 py-1.5 text-orange-800">
                     Total ronda: +{roundResult.total}
                   </span>
                 </div>
@@ -691,7 +691,7 @@ export default function Home() {
               <button
                 type="button"
                 onClick={nextRound}
-                className="mt-4 rounded-2xl bg-slate-950 px-7 py-3 font-black text-white shadow-xl shadow-slate-300 transition hover:-translate-y-0.5 hover:bg-orange-600"
+                className="mt-3 rounded-2xl bg-slate-950 px-7 py-2.5 font-black text-white shadow-xl shadow-slate-300 transition hover:-translate-y-0.5 hover:bg-orange-600"
               >
                 {roundNo >= TOTAL_ROUNDS ? "Ver resultado final" : "Siguiente canción →"}
               </button>
@@ -701,26 +701,26 @@ export default function Home() {
       )}
 
       {screen === "finished" && (
-        <section className="glass animate-fade-in mx-auto w-full max-w-2xl rounded-[2rem] p-8 text-center">
-          <div className="mx-auto mb-4 flex h-24 w-24 items-center justify-center rounded-full bg-orange-100 text-4xl">
+        <section className="glass animate-fade-in mx-auto w-full max-w-2xl rounded-[1.5rem] p-5 text-center">
+          <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-orange-100 text-3xl">
             🏆
           </div>
-          <h2 className="text-3xl font-black text-slate-950">Partida terminada</h2>
-          <p className="mt-2 text-base font-semibold text-slate-600">
+          <h2 className="text-2xl font-black text-slate-950">Partida terminada</h2>
+          <p className="mt-1 text-sm font-semibold text-slate-600">
             Hiciste <strong>{score}</strong> puntos de 50 posibles en {TOTAL_ROUNDS} canciones.
           </p>
-          <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
+          <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-center">
             <button
               type="button"
               onClick={restart}
-              className="rounded-2xl bg-slate-950 px-7 py-3 font-black text-white shadow-xl shadow-slate-300 transition hover:-translate-y-0.5 hover:bg-orange-600"
+              className="rounded-2xl bg-slate-950 px-7 py-2.5 font-black text-white shadow-xl shadow-slate-300 transition hover:-translate-y-0.5 hover:bg-orange-600"
             >
               Jugar otra vez
             </button>
             <button
               type="button"
               onClick={() => setScreen("setup")}
-              className="rounded-2xl border border-slate-200 bg-white px-7 py-3 font-black text-slate-700 shadow-sm transition hover:border-orange-300 hover:bg-orange-50"
+              className="rounded-2xl border border-slate-200 bg-white px-7 py-2.5 font-black text-slate-700 shadow-sm transition hover:border-orange-300 hover:bg-orange-50"
             >
               Cambiar configuración
             </button>

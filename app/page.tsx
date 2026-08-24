@@ -243,10 +243,10 @@ export default function Home() {
       const tracks = uniqueSongTitles(data.tracks ?? []);
       const isCorrectArtist = artist === round.correct.artistName;
       const options = isCorrectArtist
-        ? shuffle([
+        ? shuffle(uniqueSongTitles([
             round.correct,
-            ...tracks.filter((t) => t.trackId !== round.correct.trackId).slice(0, 4),
-          ]).slice(0, 5)
+            ...tracks.filter((t) => t.trackId !== round.correct.trackId),
+          ])).slice(0, 5)
         : tracks.slice(0, 5);
       setSongOptions(options);
     } finally {
@@ -543,12 +543,17 @@ export default function Home() {
                   Buscando canciones de {selectedArtist}...
                 </div>
               )}
-              {selectedArtist && !loadingSongs && songOptions.length < 5 && (
+              {selectedArtist && !loadingSongs && songOptions.length === 0 && (
                 <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-5 text-center text-sm font-bold text-red-700">
-                  No encontré 5 canciones con preview para {selectedArtist}. Elegí otro autor.
+                  No encontré canciones con preview para {selectedArtist}. Elegí otro autor.
                 </div>
               )}
-              {selectedArtist && !loadingSongs && songOptions.length >= 5 && (
+              {selectedArtist && !loadingSongs && songOptions.length > 0 && songOptions.length < 5 && (
+                <p className="mb-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-bold text-amber-800">
+                  Encontré {songOptions.length} canciones con preview para {selectedArtist}.
+                </p>
+              )}
+              {selectedArtist && !loadingSongs && songOptions.length > 0 && (
               <div className="grid gap-2">
                 {songOptions.map((opt) => {
                   const chosen = selectedSongId === opt.trackId;

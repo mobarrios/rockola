@@ -14,6 +14,8 @@ export interface ITunesTrack {
 }
 
 const SEARCH = "https://api.deezer.com/search/track";
+const ARTIST_SEARCH = "https://api.deezer.com/search/artist";
+const ARTIST_TOP = "https://api.deezer.com/artist";
 const seedTrackCache = new Map<string, ITunesTrack | null>();
 const poolCache = new Map<
   string,
@@ -133,9 +135,46 @@ async function searchSeedTrack(
 }
 
 export async function fetchArtistTracks(artist: string): Promise<ITunesTrack[]> {
+  const artistParams = new URLSearchParams({ q: artist, limit: "5" });
+  try {
+    const artistRes = await fetch(`${ARTIST_SEARCH}?${artistParams.toString()}`, {
+      next: { revalidate: 3600 },
+    });
+    if (artistRes.ok) {
+      const artistData = (await artistRes.json()) as { data?: any[] };
+      const artists = artistData.data ?? [];
+      const match =
+        artists.find((a) => isPreferredArtistMatch(a.name ?? "", artist)) ??
+        artists.find((a) => matchesSeedArtist(a.name ?? "", artist)) ??
+        artists[0];
+      if (match?.id) {
+        const topRes = await fetch(`${ARTIST_TOP}/${match.id}/top?limit=50`, {
+          next: { revalidate: 3600 },
+        });
+        if (topRes.ok) {
+          const topData = (await topRes.json()) as { data?: any[] };
+          const topTracks = (topData.data ?? [])
+            .filter((t) => t.preview && t.title && t.artist?.name)
+            .map((t) => ({
+              trackId: Number(t.id),
+              trackName: t.title,
+              artistName: artist,
+              previewUrl: t.preview,
+              artworkUrl100: t.album?.cover_medium ?? t.album?.cover ?? "",
+              primaryGenreName: "",
+            }));
+          const dedupedTop = dedupeByTitle(topTracks);
+          if (dedupedTop.length >= 5) return dedupedTop.slice(0, 12);
+        }
+      }
+    }
+  } catch {
+    // Fall back to text search below.
+  }
+
   const params = new URLSearchParams({
     q: artist,
-    limit: "50",
+    limit: "100",
   });
   try {
     const res = await fetch(`${SEARCH}?${params.toString()}`, {

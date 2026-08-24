@@ -44,6 +44,14 @@ function artwork300(url: string): string {
   return url.replace("100x100", "300x300");
 }
 
+function audioSource(url: string): string {
+  if (url.startsWith("/api/audio")) return url;
+  if (url.startsWith("http://") || url.startsWith("https://")) {
+    return `/api/audio?src=${encodeURIComponent(url)}`;
+  }
+  return url;
+}
+
 function artistKey(track: ITunesTrack): string {
   return track.artistName
     .normalize("NFD")
@@ -156,10 +164,11 @@ export default function Home() {
   function prepareAudio(previewUrl?: string | null) {
     const el = audioRef.current;
     if (!el || !previewUrl) return;
+    const src = audioSource(previewUrl);
     setAudioReady(false);
     setAudioError(null);
-    if (el.src !== previewUrl) {
-      el.src = previewUrl;
+    if (el.getAttribute("src") !== src) {
+      el.src = src;
       el.load();
     }
   }
@@ -169,11 +178,12 @@ export default function Home() {
     if (!el) return;
     const url = previewUrl ?? round?.correct.previewUrl;
     if (!url) return;
+    const src = audioSource(url);
     if (timerRef.current) clearTimeout(timerRef.current);
     setAudioError(null);
     setIsPlaying(false);
-    if (el.src !== url) {
-      el.src = url;
+    if (el.getAttribute("src") !== src) {
+      el.src = src;
       el.load();
     }
     const seconds = level === 1 ? FIRST_CLUE_SECONDS : SECOND_CLUE_SECONDS;

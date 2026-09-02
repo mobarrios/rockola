@@ -19,6 +19,7 @@ const TRACKS_PER_ROUND = 5;
 const FIRST_CLUE_SECONDS = 2;
 const SECOND_CLUE_SECONDS = 4;
 const MAX_ROUND_POINTS = 5;
+const ROUND_TIME_LIMIT = 10;
 
 interface RoundState {
   correct: ITunesTrack;
@@ -164,10 +165,13 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [loadingSongs, setLoadingSongs] = useState(false);
   const [noResults, setNoResults] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(ROUND_TIME_LIMIT);
+  const [timerActive, setTimerActive] = useState(false);
 
   const deckRef = useRef<ITunesTrack[]>([]);
   const audioRef = useRef<HTMLAudioElement>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const clueStartsRef = useRef<{ first?: number; second?: number }>({});
   const roundStartedAtRef = useRef<number>(Date.now());
 
@@ -191,6 +195,46 @@ export default function Home() {
       el.src = src;
       el.load();
     }
+  }
+
+  function startRoundTimer() {
+    if (timerActive) return;
+    setTimeLeft(ROUND_TIME_LIMIT);
+    setTimerActive(true);
+    countdownRef.current = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          if (countdownRef.current) clearInterval(countdownRef.current);
+          setTimerActive(false);
+          handleTimeUp();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  }
+
+  function handleTimeUp() {
+    if (revealed || !round) return;
+    setRevealed(true);
+    if (audioRef.current) audioRef.current.pause();
+    setIsPlaying(false);
+    const result = {
+      speed: 0,
+      artist: 0,
+      song: 0,
+      elapsedSeconds: ROUND_TIME_LIMIT,
+      total: 0,
+    };
+    setRoundResult(result);
+    setStreak(0);
+  }
+
+  function clearRoundTimer() {
+    if (countdownRef.current) clearInterval(countdownRef.current);
+    countdownRef.current = null;
+    setTimerActive(false);
+    setTimeLeft(ROUND_TIME_LIMIT);
   }
 
   function playClue(level: 1 | 2, previewUrl?: string) {
@@ -222,6 +266,7 @@ export default function Home() {
       if (starts[key] === undefined) starts[key] = randomStart(el.duration, seconds, avoid);
       el.currentTime = starts[key] ?? 0;
     };
+    if (level === 1) startRoundTimer();
     if (el.readyState >= 1) {
       seekToClue();
       void el.play().then(startTimer).catch(() => {
@@ -257,6 +302,7 @@ export default function Home() {
   }
 
   async function generateRound() {
+    clearRoundTimer();
     if (deckRef.current.length < TRACKS_PER_ROUND) await refill();
     if (deckRef.current.length < TRACKS_PER_ROUND) {
       setNoResults(true);
@@ -343,6 +389,7 @@ export default function Home() {
 
   function submitAnswer() {
     if (revealed || !round || selectedSongId === null || !selectedArtist) return;
+    clearRoundTimer();
     setRevealed(true);
     if (audioRef.current) audioRef.current.pause();
     setIsPlaying(false);
@@ -366,6 +413,7 @@ export default function Home() {
   }
 
   async function nextRound() {
+    clearRoundTimer();
     if (roundNo >= totalRounds) {
       setScreen("finished");
       return;
@@ -374,6 +422,7 @@ export default function Home() {
   }
 
   async function restart() {
+    clearRoundTimer();
     deckRef.current = [];
     setScore(0);
     setStreak(0);
@@ -554,6 +603,23 @@ export default function Home() {
             </div>
 
             <Waveform active={isPlaying} />
+
+            {timerActive && (
+              <div className="mt-2 flex items-center justify-center gap-2">
+                <span className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">
+                  Tiempo restante
+                </span>
+                <div className={`flex h-6 w-24 items-center justify-center rounded-xl border-2 font-black text-lg tabular-nums transition-all ${
+                  timeLeft <= 3
+                    ? "border-red-500 bg-red-50 text-red-700 animate-pulse"
+                    : timeLeft <= 6
+                    ? "border-amber-500 bg-amber-50 text-amber-700"
+                    : "border-emerald-500 bg-emerald-50 text-emerald-700"
+                }`}>
+                  {timeLeft}s
+                </div>
+              </div>
+            )}
 
             {!audioError && !audioReady && (
               <p className="mt-2 text-xs font-bold text-slate-500">

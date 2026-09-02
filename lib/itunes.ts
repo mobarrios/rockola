@@ -326,7 +326,7 @@ async function fetchAllTimeTracks(opts: {
     ? allSeeds.filter((s) => s.genre === opts.genreLabel)
     : allSeeds;
   const seeds = shuffle(seedsForGenre);
-  const chosen = seeds.slice(0, 100);
+  const chosen = seeds;
   const out: ITunesTrack[] = [];
   let idx = 0;
 

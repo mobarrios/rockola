@@ -19,7 +19,7 @@ const TRACKS_PER_ROUND = 5;
 const FIRST_CLUE_SECONDS = 2;
 const SECOND_CLUE_SECONDS = 4;
 const MAX_ROUND_POINTS = 5;
-const ROUND_TIME_LIMIT = 10;
+const ROUND_TIME_LIMIT = 30;
 
 interface RoundState {
   correct: ITunesTrack;
